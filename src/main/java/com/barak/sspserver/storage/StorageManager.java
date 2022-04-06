@@ -5,45 +5,72 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 
 import org.springframework.web.multipart.MultipartFile;
 
 public class StorageManager {
 	private static StorageManager storageManager = null;
-	private HashSet<String> disks;
+	private LinkedHashSet<String> disks; // To be modified at each disk addition or removal
+	String[] disksArray;
 
 	public static StorageManager getStorageManager() throws Exception {
 		if (storageManager == null) {
-			throw new Exception("Call init first");
+			throw new Exception("First call initStorageManager");
 		}
 
 		return storageManager;
 	}
 
 	private StorageManager(LinkedList<String> diskList) {
-		disks = new HashSet<String>();
+		disks = new LinkedHashSet<String>();
 		for (String disk : diskList) {
 			disks.add(disk);
 		}
+
+		disksArray = new String[disks.size()];
+		System.arraycopy(disks.toArray(), 0, disksArray, 0, disks.size());
 	}
 
 	public static void initStorageManager(LinkedList<String> diskList) throws Exception {
 		if (storageManager != null) {
-			throw new Exception("Already initialied");
+			throw new Exception("Already initialized");
 		}
 
 		storageManager = new StorageManager(diskList);
 	}
 
-	public void saveFile(MultipartFile file, String diskpath, String fileName) throws IOException {
+	public void create(MultipartFile file, String fullFilePath) throws IOException {
 		byte[] bytes = file.getBytes();
-		Path path = Paths.get(diskpath + File.separator + fileName);
-		Files.write(path, bytes);
+		Path fullPath = Paths.get(fullFilePath);
+		Files.write(fullPath, bytes);
 	}
 
-	public int validateDiskPath(String diskPath) {
-		return disks.contains(diskPath) ? 0 : -1;
+	public String allocateDisk(String fileName) {
+		int fileHash = fileName.hashCode() & 0x7FFFFFFF;
+		int diskNum = fileHash % disks.size();
+
+		return (String) disksArray[diskNum];
+	}
+
+	public int mkdir(String dirPath) {
+		try {
+			for (String diskPath : disksArray) {
+				Files.createDirectory(Paths.get(diskPath + dirPath));
+			}
+		} catch (IOException e) {
+			return -1;
+		}
+
+		return 0;
+	}
+
+	public int rm(String fullFilePath) {
+		File file = new File(fullFilePath);
+		if (file.delete()) {
+			return 0;
+		}
+		return -1;
 	}
 }

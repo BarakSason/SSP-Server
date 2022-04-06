@@ -13,7 +13,8 @@ public class SSP_Server {
 
 	public static void main(String[] args) {
 		LinkedList<String> diskList = new LinkedList<String>();
-		diskList.add("/home/barak/uploads");
+		diskList.add("/home/barak/uploads-1/");
+		diskList.add("/home/barak/uploads-2/");
 		try {
 			StorageManager.initStorageManager(diskList);
 		} catch (Exception e) {
