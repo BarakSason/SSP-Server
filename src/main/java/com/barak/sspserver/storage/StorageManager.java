@@ -66,11 +66,22 @@ public class StorageManager {
 		return 0;
 	}
 
-	public int rm(String fullFilePath) {
+	public int deleteFile(String fullFilePath) {
 		File file = new File(fullFilePath);
 		if (file.delete()) {
 			return 0;
 		}
 		return -1;
+	}
+
+	public int deleteDir(String dirPath) {
+		try {
+			for (String diskPath : disksArray) {
+				Files.delete(Paths.get(diskPath + dirPath));
+			}
+		} catch (IOException e) {
+			return -1;
+		}
+		return 0;
 	}
 }

@@ -2,6 +2,7 @@ package com.barak.sspserver.controller;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedList;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.barak.sspserver.mongodb.MongoManager;
 import com.barak.sspserver.storage.StorageManager;
 
+//TODO: change return values of several APIs from LinkedList<String> to a data structure composed of
+// a dedicated class which represents the return info (something like "FileInfo" which has diskPath 
+// and filePath fields)
 @RestController
 public class ServerConroller {
 	MongoManager mongoManager;
@@ -25,14 +29,9 @@ public class ServerConroller {
 		storageManager = StorageManager.getStorageManager();
 	}
 
-	@PostMapping("/upload")
+	@PostMapping("/create")
 	public ResponseEntity<String> create(@RequestParam("file") MultipartFile file,
 			@RequestParam("dirPath") String dirPath) {
-		if (!dirPath.endsWith("/")) {
-			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED)
-					.body("Dir path must end with \"" + "/" + "\" " + dirPath);
-		}
-
 		String fileName = file.getOriginalFilename();
 		String filePath = dirPath + fileName;
 		String diskPath = storageManager.allocateDisk(filePath);
@@ -49,13 +48,13 @@ public class ServerConroller {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("File already exist " + filePath);
 		}
 
-		return ResponseEntity.status(HttpStatus.CREATED).body("You successfully uploaded " + filePath);
+		return ResponseEntity.status(HttpStatus.CREATED).body("Successfully created " + filePath);
 	}
 
 	// TODO: for debugging only
 	@GetMapping("/listall")
-	public ResponseEntity<Object> listAll() {
-		HashMap<String, String> entries = mongoManager.listAll();
+	public ResponseEntity<LinkedList<String>> listAll() {
+		LinkedList<String> entries = mongoManager.listAll();
 
 		return ResponseEntity.status(HttpStatus.OK).body(entries);
 	}
@@ -69,23 +68,40 @@ public class ServerConroller {
 	}
 
 	@GetMapping("/ls")
-	public ResponseEntity<Object> ls(@RequestParam("dirPath") String dirPath) {
-		HashMap<String, String> entries = mongoManager.ls(dirPath);
+	public ResponseEntity<LinkedList<String>> ls(@RequestParam("dirPath") String dirPath) {
+		LinkedList<String> entries = mongoManager.ls(dirPath);
 
 		return ResponseEntity.status(HttpStatus.OK).body(entries);
 	}
 
 	@DeleteMapping("/rm")
-	public ResponseEntity<Object> rm(@RequestParam("dirPath") String dirPath,
+	public ResponseEntity<String> rm(@RequestParam("dirPath") String dirPath,
 			@RequestParam("fileName") String fileName) {
+		if (fileName.equals("")) {
+			return deleteDir(dirPath);
+		} else {
+			return deleteFile(dirPath, fileName);
+		}
+	}
+
+	public ResponseEntity<String> deleteDir(String dirPath) {
+		if (storageManager.deleteDir(dirPath) == 0) {
+			return ResponseEntity.status(HttpStatus.OK).body("Dir deleted " + dirPath);
+		}
+
+		return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Failed to delete dir " + dirPath);
+	}
+
+	public ResponseEntity<String> deleteFile(String dirPath, String fileName) {
 		String filePath = dirPath + fileName;
+
 		String diskPath = mongoManager.removeEntry(filePath);
 		if (diskPath == null) {
 			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("No such file " + filePath);
 		}
 
 		String fullFilePath = diskPath + filePath;
-		if (storageManager.rm(fullFilePath) == 0) {
+		if (storageManager.deleteFile(fullFilePath) == 0) {
 			return ResponseEntity.status(HttpStatus.OK).body("File deleted " + filePath);
 		}
 

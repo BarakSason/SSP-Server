@@ -13,18 +13,17 @@ public class SSP_Server {
 
 	public static void main(String[] args) {
 		LinkedList<String> diskList = new LinkedList<String>();
-		diskList.add("/home/barak/uploads-1/");
-		diskList.add("/home/barak/uploads-2/");
+		diskList.add("/home/barak/uploads-1");
+		diskList.add("/home/barak/uploads-2");
 		try {
 			StorageManager.initStorageManager(diskList);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		MongoManager mongoManager = MongoManager.getMongoManager();
 
 		// Run Server
 		SpringApplication.run(SSP_Server.class, args);
 
-//		mongoManager.mongoReset();
+//		MongoManager.getMongoManager().mongoReset();
 	}
 }

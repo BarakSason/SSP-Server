@@ -1,7 +1,7 @@
 package com.barak.sspserver.mongodb;
 
-import java.io.File;
 import java.util.HashMap;
+import java.util.LinkedList;
 
 import org.bson.Document;
 
@@ -20,7 +20,7 @@ public class MongoManager {
 	MongoClient mongoClient;
 	MongoDatabase mongoDB;
 	String db;
-	String collection;
+	String collectionName;
 
 	public static MongoManager getMongoManager() {
 		if (mongoManager == null) {
@@ -32,21 +32,18 @@ public class MongoManager {
 
 	private MongoManager() {
 		db = "Storage";
-		collection = "Files";
+		collectionName = "Files";
 
 		try {
 			// Creating a Mongo client
 			mongoClient = new MongoClient("localhost", 27017);
-
-			System.out.println("Connected to the database successfully");
 
 			// Accessing the database
 			mongoDB = mongoClient.getDatabase(db);
 
 			try {
 				// Creating a collection
-				mongoDB.getCollection(collection);
-				System.out.println("Collection created successfully");
+				mongoDB.getCollection(collectionName);
 			} catch (MongoCommandException e) {
 				if (e.getCode() != 48) {
 					throw e;
@@ -86,16 +83,16 @@ public class MongoManager {
 		return 0;
 	}
 
-	public HashMap<String, String> listAll() {
-		HashMap<String, String> entries = new HashMap<>();
+	public LinkedList<String> listAll() {
+		LinkedList<String> entries = new LinkedList<>();
 
-		MongoCollection<Document> collection = mongoDB.getCollection("Files");
+		MongoCollection<Document> collection = mongoDB.getCollection(collectionName);
 		FindIterable<Document> docIter = collection.find();
 		MongoCursor<Document> it = docIter.iterator();
 		while (it.hasNext()) {
 			Document document = it.next();
-			entries.put("Disk path : " + document.getString("diskpath") + File.separator,
-					"File path : " + document.getString("filePath"));
+			entries.add(
+					"Disk path: " + document.getString("diskpath") + " File path: " + document.getString("filePath"));
 		}
 		it.close();
 
@@ -113,7 +110,7 @@ public class MongoManager {
 
 	public String removeEntry(String filePath) {
 		String diskPath = null;
-		MongoCollection<Document> collection = mongoDB.getCollection("Files");
+		MongoCollection<Document> collection = mongoDB.getCollection(collectionName);
 
 		// Search the db - If a match is found, delete it
 		BasicDBObject filter = new BasicDBObject();
@@ -133,19 +130,19 @@ public class MongoManager {
 		return null;
 	}
 
-	public HashMap<String, String> ls(String dirPath) {
-		HashMap<String, String> entries = new HashMap<>();
+	public LinkedList<String> ls(String dirPath) {
+		LinkedList<String> entries = new LinkedList<String>();
 
 		// Search the db for all files in a given dir
 		BasicDBObject filter = new BasicDBObject();
 		filter.put("dirPath", dirPath);
-		MongoCollection<Document> collection = mongoDB.getCollection("Files");
+		MongoCollection<Document> collection = mongoDB.getCollection(collectionName);
 		FindIterable<Document> docIter = collection.find(Filters.and(filter));
 		MongoCursor<Document> it = docIter.iterator();
 		while (it.hasNext()) {
 			Document document = it.next();
-			entries.put("File path : " + (String) document.get("filePath"),
-					"Disk path : " + (String) document.get("diskpath"));
+			entries.add(
+					"File path: " + document.getString("filePath") + " Disk path: " + document.getString("diskpath"));
 		}
 		it.close();
 
