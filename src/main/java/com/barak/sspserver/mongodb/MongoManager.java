@@ -1,6 +1,5 @@
 package com.barak.sspserver.mongodb;
 
-import java.util.HashMap;
 import java.util.LinkedList;
 
 import org.bson.Document;

@@ -84,7 +84,7 @@ public class ServerConroller {
 		}
 	}
 
-	public ResponseEntity<String> deleteDir(String dirPath) {
+	private ResponseEntity<String> deleteDir(String dirPath) {
 		if (storageManager.deleteDir(dirPath) == 0) {
 			return ResponseEntity.status(HttpStatus.OK).body("Dir deleted " + dirPath);
 		}
@@ -92,7 +92,7 @@ public class ServerConroller {
 		return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Failed to delete dir " + dirPath);
 	}
 
-	public ResponseEntity<String> deleteFile(String dirPath, String fileName) {
+	private ResponseEntity<String> deleteFile(String dirPath, String fileName) {
 		String filePath = dirPath + fileName;
 
 		String diskPath = mongoManager.removeEntry(filePath);
