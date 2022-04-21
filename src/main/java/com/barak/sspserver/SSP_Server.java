@@ -23,7 +23,5 @@ public class SSP_Server {
 
 		// Run Server
 		SpringApplication.run(SSP_Server.class, args);
-
-//		MongoManager.getMongoManager().mongoReset();
 	}
 }

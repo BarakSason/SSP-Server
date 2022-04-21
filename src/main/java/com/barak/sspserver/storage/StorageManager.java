@@ -3,8 +3,10 @@ package com.barak.sspserver.storage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 
@@ -41,10 +43,9 @@ public class StorageManager {
 		storageManager = new StorageManager(diskList);
 	}
 
-	public void create(MultipartFile file, String fullFilePath) throws IOException {
-		byte[] bytes = file.getBytes();
+	public void create(byte[] fileContent, String fullFilePath) throws IOException {
 		Path fullPath = Paths.get(fullFilePath);
-		Files.write(fullPath, bytes);
+		Files.write(fullPath, fileContent, StandardOpenOption.CREATE_NEW);
 	}
 
 	public String allocateDisk(String fileName) {

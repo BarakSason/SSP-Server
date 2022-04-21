@@ -1,150 +1,83 @@
 package com.barak.sspserver.mongodb;
 
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
 
-import org.bson.Document;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Example;
+import org.springframework.stereotype.Component;
 
-import com.mongodb.BasicDBObject;
-import com.mongodb.MongoClient;
-import com.mongodb.MongoCommandException;
-import com.mongodb.client.FindIterable;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoCursor;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.result.DeleteResult;
+import com.barak.sspserver.repository.FileDataRep;
 
+@Component
 public class MongoManager {
-	private static MongoManager mongoManager = null;
-	MongoClient mongoClient;
-	MongoDatabase mongoDB;
-	String db;
-	String collectionName;
+	@Autowired
+	FileDataRep rep;
 
-	public static MongoManager getMongoManager() {
-		if (mongoManager == null) {
-			mongoManager = new MongoManager();
-		}
-
-		return mongoManager;
+	public void insert(DBFileObject dbFileObject) throws Exception {
+		rep.save(dbFileObject);
 	}
 
-	private MongoManager() {
-		db = "Storage";
-		collectionName = "Files";
+	public DBFileObject searchByPath(String filePath) {
+		DBFileObject dbFileObject = new DBFileObject();
+		dbFileObject.setFilePath(filePath);
+		Example<DBFileObject> dbFileObjectExample = Example.of(dbFileObject);
+		Optional<DBFileObject> match = rep.findOne(dbFileObjectExample);
 
-		try {
-			// Creating a Mongo client
-			mongoClient = new MongoClient("localhost", 27017);
-
-			// Accessing the database
-			mongoDB = mongoClient.getDatabase(db);
-
-			try {
-				// Creating a collection
-				mongoDB.getCollection(collectionName);
-			} catch (MongoCommandException e) {
-				if (e.getCode() != 48) {
-					throw e;
-				} else {
-					System.out.println("Collection already exists");
-				}
-			}
-		} catch (Exception e) {
-			if (mongoDB != null) {
-				mongoDB.drop();
-			}
-			if (mongoClient != null) {
-				mongoClient.close();
-			}
-			throw e;
-		}
-	}
-
-	public int addEntry(String diskpath, String dirPath, String filePath) {
-		MongoCollection<Document> collection = mongoDB.getCollection("Files");
-
-		// Search the db - If a match is found then this file already exist
-		BasicDBObject filter = new BasicDBObject();
-		filter.put("diskpath", diskpath);
-		filter.put("filePath", filePath);
-		FindIterable<Document> docIter = collection.find(Filters.and(filter));
-		MongoCursor<Document> it = docIter.iterator();
-		if (it.hasNext()) {
-			it.close();
-			return -1;
+		if (match.isEmpty()) {
+			return null;
 		}
 
-		// Add an entry
-		Document document = new Document("diskpath", diskpath).append("dirPath", dirPath).append("filePath", filePath);
-		collection.insertOne(document);
-
-		return 0;
+		return match.get();
 	}
 
 	public LinkedList<String> listAll() {
-		LinkedList<String> entries = new LinkedList<>();
+		LinkedList<String> files = new LinkedList<>();
 
-		MongoCollection<Document> collection = mongoDB.getCollection(collectionName);
-		FindIterable<Document> docIter = collection.find();
-		MongoCursor<Document> it = docIter.iterator();
+		List<DBFileObject> dbFiles = rep.findAll();
+
+		Iterator<DBFileObject> it = dbFiles.iterator();
 		while (it.hasNext()) {
-			Document document = it.next();
-			entries.add(
-					"Disk path: " + document.getString("diskpath") + " File path: " + document.getString("filePath"));
-		}
-		it.close();
-
-		return entries;
-	}
-
-	public void mongoReset() {
-		if (mongoDB != null) {
-			mongoDB.drop();
-		}
-		if (mongoClient != null) {
-			mongoClient.close();
-		}
-	}
-
-	public String removeEntry(String filePath) {
-		String diskPath = null;
-		MongoCollection<Document> collection = mongoDB.getCollection(collectionName);
-
-		// Search the db - If a match is found, delete it
-		BasicDBObject filter = new BasicDBObject();
-		filter.put("filePath", filePath);
-		FindIterable<Document> docIter = collection.find(Filters.and(filter));
-		MongoCursor<Document> it = docIter.iterator();
-		if (it.hasNext()) {
-			Document document = it.next();
-			diskPath = document.getString("diskpath");
+			DBFileObject dbFileObject = it.next();
+			files.add("Disk path: " + dbFileObject.getDiskPath() + " File path: " + dbFileObject.getFilePath());
 		}
 
-		DeleteResult deleteRes = collection.deleteOne(Filters.and(filter));
-
-		if (deleteRes.getDeletedCount() == 1) {
-			return diskPath;
-		}
-		return null;
+		return files;
 	}
 
 	public LinkedList<String> ls(String dirPath) {
-		LinkedList<String> entries = new LinkedList<String>();
+		LinkedList<String> files = new LinkedList<String>();
 
-		// Search the db for all files in a given dir
-		BasicDBObject filter = new BasicDBObject();
-		filter.put("dirPath", dirPath);
-		MongoCollection<Document> collection = mongoDB.getCollection(collectionName);
-		FindIterable<Document> docIter = collection.find(Filters.and(filter));
-		MongoCursor<Document> it = docIter.iterator();
+		DBFileObject dbFileObject = new DBFileObject();
+		dbFileObject.setDirPath(dirPath);
+		Example<DBFileObject> dbFileObjectExample = Example.of(dbFileObject);
+		List<DBFileObject> dbFiles = rep.findAll(dbFileObjectExample);
+
+		Iterator<DBFileObject> it = dbFiles.iterator();
 		while (it.hasNext()) {
-			Document document = it.next();
-			entries.add(
-					"File path: " + document.getString("filePath") + " Disk path: " + document.getString("diskpath"));
+			DBFileObject cur = it.next();
+			files.add(cur.getFileName());
 		}
-		it.close();
 
-		return entries;
+		return files;
 	}
+
+	public String removeEntry(String filePath) {
+		DBFileObject dbFileObject = new DBFileObject();
+		dbFileObject.setFilePath(filePath);
+
+		Example<DBFileObject> dbFileObjectExample = Example.of(dbFileObject);
+		Optional<DBFileObject> match = rep.findOne(dbFileObjectExample);
+
+		if (match.isEmpty()) {
+			return null;
+		}
+
+		dbFileObject = match.get();
+		rep.delete(dbFileObject);
+		return dbFileObject.getDiskPath();
+	}
+
 }
