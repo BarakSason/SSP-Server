@@ -5,7 +5,6 @@ import java.util.LinkedList;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import com.barak.sspserver.mongodb.MongoManager;
 import com.barak.sspserver.storage.StorageManager;
 
 @SpringBootApplication

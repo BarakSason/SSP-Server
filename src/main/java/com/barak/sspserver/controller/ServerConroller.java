@@ -1,32 +1,23 @@
 package com.barak.sspserver.controller;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
-import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.barak.sspserver.model.FileData;
 import com.barak.sspserver.mongodb.DBFileObject;
 import com.barak.sspserver.mongodb.MongoManager;
-import com.barak.sspserver.repository.FileDataRep;
 import com.barak.sspserver.storage.StorageManager;
 
 //TODO: change return values of several APIs from LinkedList<String> to a data structure composed of
@@ -65,8 +56,8 @@ public class ServerConroller {
 
 		// Add file to db
 		try {
-			mongoManager.insert(new DBFileObject(fileData.getId(), fileData.getFileName(), fileData.getDirPath(),
-					filePath, diskPath));
+			mongoManager
+					.insert(new DBFileObject(fileData.getFileName(), fileData.getDirPath(), filePath, diskPath, false));
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("DB error " + e.getMessage());
 		}
@@ -84,14 +75,43 @@ public class ServerConroller {
 
 	@PostMapping("/mkdir")
 	public ResponseEntity<String> mkdir(@RequestParam("dirPath") String dirPath) {
-		if (storageManager.mkdir(dirPath) == 0) {
-			return ResponseEntity.status(HttpStatus.OK).body("Dir created successfully " + dirPath);
+		String parentDirPath = null;
+
+		/*
+		 * Get the path of the parent dir out of the dirPath and user it as a dirPath
+		 * value for this dir - Used in ls implementation to list dirs as well as files
+		 * in a dir
+		 */
+		if (!dirPath.equals(File.separator)) {
+			String temp = dirPath.substring(0, dirPath.lastIndexOf(File.separator));
+			parentDirPath = temp.substring(0, temp.lastIndexOf(File.separator) + 1);
+		} else {
+			parentDirPath = dirPath;
 		}
-		return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Failed to create dir " + dirPath);
+
+		// Create dir on disk
+		if (storageManager.mkdir(dirPath) != 0) {
+			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Failed to create dir " + dirPath);
+		}
+
+		// Add dir to db
+		try {
+			mongoManager.insert(new DBFileObject(dirPath, parentDirPath, "", "", true));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.CONFLICT).body("DB error " + e.getMessage());
+		}
+
+		return ResponseEntity.status(HttpStatus.OK).body("Dir created successfully " + dirPath);
 	}
 
 	@GetMapping("/ls")
 	public ResponseEntity<LinkedList<String>> ls(@RequestParam("dirPath") String dirPath) {
+		/*
+		 * The "ls" op is implemented through a db query, as a local FS implementation
+		 * requires aggregating the files and dir from the multiple local disks, which
+		 * might be a slow operation on large scale. Not sure if te db is faster - worth
+		 * testing on large scale
+		 */
 		LinkedList<String> files = mongoManager.ls(dirPath);
 
 		return ResponseEntity.status(HttpStatus.OK).body(files);
@@ -108,21 +128,30 @@ public class ServerConroller {
 	}
 
 	private ResponseEntity<String> deleteDir(String dirPath) {
-		if (storageManager.deleteDir(dirPath) == 0) {
-			return ResponseEntity.status(HttpStatus.OK).body("Dir deleted " + dirPath);
+		/* Delete dir from DB */
+		if (mongoManager.deleteDir(dirPath) != 0) {
+			return ResponseEntity.status(HttpStatus.CONFLICT).body("Failed to delete dir from DB " + dirPath);
 		}
 
-		return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Failed to delete dir " + dirPath);
+		/* Delete dir from disks */
+		if (storageManager.deleteDir(dirPath) != 0) {
+			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED)
+					.body("Failed to delete dir from disk " + dirPath);
+		}
+
+		return ResponseEntity.status(HttpStatus.OK).body("Dir deleted successfully " + dirPath);
 	}
 
 	private ResponseEntity<String> deleteFile(String dirPath, String fileName) {
 		String filePath = dirPath + fileName;
 
+		/* Delete file from disks */
 		String diskPath = mongoManager.removeEntry(filePath);
 		if (diskPath == null) {
 			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("No such file " + filePath);
 		}
 
+		/* Delete file from db */
 		String fullFilePath = diskPath + filePath;
 		if (storageManager.deleteFile(fullFilePath) == 0) {
 			return ResponseEntity.status(HttpStatus.OK).body("File deleted " + filePath);

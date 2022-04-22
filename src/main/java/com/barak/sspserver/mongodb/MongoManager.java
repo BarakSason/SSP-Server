@@ -50,12 +50,25 @@ public class MongoManager {
 	public LinkedList<String> ls(String dirPath) {
 		LinkedList<String> files = new LinkedList<String>();
 
+		/* Get files */
 		DBFileObject dbFileObject = new DBFileObject();
 		dbFileObject.setDirPath(dirPath);
 		Example<DBFileObject> dbFileObjectExample = Example.of(dbFileObject);
 		List<DBFileObject> dbFiles = rep.findAll(dbFileObjectExample);
 
 		Iterator<DBFileObject> it = dbFiles.iterator();
+		while (it.hasNext()) {
+			DBFileObject cur = it.next();
+			files.add(cur.getFileName());
+		}
+
+		/* Get dirs */
+		dbFileObject = new DBFileObject();
+		dbFileObject.setDir(true);
+		dbFileObjectExample = Example.of(dbFileObject);
+		dbFiles = rep.findAll(dbFileObjectExample);
+
+		it = dbFiles.iterator();
 		while (it.hasNext()) {
 			DBFileObject cur = it.next();
 			files.add(cur.getFileName());
@@ -78,6 +91,23 @@ public class MongoManager {
 		dbFileObject = match.get();
 		rep.delete(dbFileObject);
 		return dbFileObject.getDiskPath();
+	}
+
+	public int deleteDir(String dirPath) {
+		DBFileObject dbFileObject = new DBFileObject();
+		dbFileObject.setFileName(dirPath);
+		dbFileObject.setDir(true);
+		Example<DBFileObject> dbFileObjectExample = Example.of(dbFileObject);
+
+		Optional<DBFileObject> match = rep.findOne(dbFileObjectExample);
+
+		if (match.isEmpty()) {
+			return -1;
+		}
+
+		dbFileObject = match.get();
+		rep.delete(dbFileObject);
+		return 0;
 	}
 
 }

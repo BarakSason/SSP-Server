@@ -3,14 +3,11 @@ package com.barak.sspserver.storage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
-
-import org.springframework.web.multipart.MultipartFile;
 
 public class StorageManager {
 	private static StorageManager storageManager = null;
