@@ -82,4 +82,16 @@ public class StorageManager {
 		}
 		return 0;
 	}
+
+	public byte[] readFile(String fullPath) {
+		byte[] fileContent = null;
+		File file = new File(fullPath);
+		try {
+			fileContent = Files.readAllBytes(file.toPath());
+		} catch (IOException e) {
+			return null;
+		}
+
+		return fileContent;
+	}
 }

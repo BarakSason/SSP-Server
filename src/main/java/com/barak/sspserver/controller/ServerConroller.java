@@ -20,9 +20,6 @@ import com.barak.sspserver.mongodb.DBFileObject;
 import com.barak.sspserver.mongodb.MongoManager;
 import com.barak.sspserver.storage.StorageManager;
 
-//TODO: change return values of several APIs from LinkedList<String> to a data structure composed of
-// a dedicated class which represents the return info (something like "FileInfo" which has diskPath 
-// and filePath fields)
 @RestController
 public class ServerConroller {
 	@Autowired
@@ -152,11 +149,28 @@ public class ServerConroller {
 		}
 
 		/* Delete file from db */
-		String fullFilePath = diskPath + filePath;
-		if (storageManager.deleteFile(fullFilePath) == 0) {
+		String fullPath = diskPath + filePath;
+		if (storageManager.deleteFile(fullPath) == 0) {
 			return ResponseEntity.status(HttpStatus.OK).body("File deleted " + filePath);
 		}
 
-		return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Failed to delete file " + fullFilePath);
+		return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Failed to delete file " + fullPath);
+	}
+
+	@GetMapping("/download")
+	public ResponseEntity<byte[]> download(@RequestParam("filePath") String filePath) {
+		DBFileObject match = mongoManager.searchByPath(filePath);
+		if (match == null) {
+			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED)
+					.body(("File doesn't exist " + filePath).getBytes());
+		}
+
+		byte[] fileContent = storageManager.readFile(match.getDiskPath() + filePath);
+		if (fileContent == null) {
+			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED)
+					.body(("Error reading file " + filePath).getBytes());
+		}
+
+		return ResponseEntity.status(HttpStatus.OK).body(fileContent);
 	}
 }
