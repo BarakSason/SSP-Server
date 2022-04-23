@@ -1,7 +1,5 @@
 package com.barak.sspserver.mongodb;
 
-import java.io.IOException;
-
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -22,15 +20,11 @@ public class DBFileObject {
 	private String dirPath;
 	private String filePath;
 	private String diskPath;
-	private boolean isDir;
 
-	public DBFileObject(String fileName, String dirPath, String filePath, String diskPath, boolean isDir)
-			throws IOException {
+	public DBFileObject(String fileName, String dirPath, String filePath) {
 		this.fileName = fileName;
 		this.dirPath = dirPath;
 		this.filePath = filePath;
-		this.diskPath = diskPath;
-		this.isDir = isDir;
 		id = String.valueOf(this.hashCode() & Integer.MAX_VALUE);
 	}
 }

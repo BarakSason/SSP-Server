@@ -11,8 +11,8 @@ import java.util.LinkedList;
 
 public class StorageManager {
 	private static StorageManager storageManager = null;
-	private LinkedHashSet<String> disks; // To be modified at each disk addition or removal
-	String[] disksArray;
+	private final LinkedHashSet<String> disks;
+	final String[] disksArray;
 
 	public static StorageManager getStorageManager() throws Exception {
 		if (storageManager == null) {
@@ -45,14 +45,16 @@ public class StorageManager {
 		Files.write(fullPath, fileContent, StandardOpenOption.CREATE_NEW);
 	}
 
-	public String allocateDisk(String fileName) {
-		int fileHash = fileName.hashCode() & 0x7FFFFFFF;
+	public String allocateDisk(String id) {
+		/* Files are created on a single disk based on */
+		int fileHash = Integer.parseInt(id);
 		int diskNum = fileHash % disks.size();
 
-		return (String) disksArray[diskNum];
+		return disksArray[diskNum];
 	}
 
 	public int mkdir(String dirPath) {
+		/* Dirs are created across all disks */
 		try {
 			for (String diskPath : disksArray) {
 				Files.createDirectory(Paths.get(diskPath + dirPath));

@@ -33,7 +33,17 @@ public class ServerConroller {
 	@PostMapping("/create")
 	public ResponseEntity<String> create(@RequestBody FileData fileData) {
 		String filePath = fileData.getDirPath() + fileData.getFileName();
-		String diskPath = storageManager.allocateDisk(filePath);
+
+		// Search the db to verify this file doesn't exist in it
+		DBFileObject match = mongoManager.searchByPath(filePath);
+
+		if (match != null) {
+			return ResponseEntity.status(HttpStatus.CONFLICT).body("File already exist in db" + filePath);
+		}
+
+		DBFileObject dbFileObject = new DBFileObject(fileData.getFileName(), fileData.getDirPath(), filePath);
+		String diskPath = storageManager.allocateDisk(dbFileObject.getId());
+		dbFileObject.setDiskPath(diskPath);
 
 		// Create the file on disk
 		try {
@@ -44,17 +54,9 @@ public class ServerConroller {
 			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Error creating file " + e.getMessage());
 		}
 
-		// Search the db to verify this file doesn't exist in it
-		DBFileObject match = mongoManager.searchByPath(filePath);
-
-		if (match != null) {
-			return ResponseEntity.status(HttpStatus.CONFLICT).body("File already exist in db" + filePath);
-		}
-
 		// Add file to db
 		try {
-			mongoManager
-					.insert(new DBFileObject(fileData.getFileName(), fileData.getDirPath(), filePath, diskPath, false));
+			mongoManager.insert(dbFileObject);
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("DB error " + e.getMessage());
 		}
@@ -93,7 +95,7 @@ public class ServerConroller {
 
 		// Add dir to db
 		try {
-			mongoManager.insert(new DBFileObject(dirPath, parentDirPath, "", "", true));
+			mongoManager.insert(new DBFileObject(dirPath, parentDirPath, ""));
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("DB error " + e.getMessage());
 		}

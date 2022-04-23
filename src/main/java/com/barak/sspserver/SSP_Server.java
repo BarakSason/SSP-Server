@@ -11,9 +11,18 @@ import com.barak.sspserver.storage.StorageManager;
 public class SSP_Server {
 
 	public static void main(String[] args) {
+		if (args[0] == null) {
+			System.out.println("Provide paths for storage");
+		}
+
 		LinkedList<String> diskList = new LinkedList<String>();
-		diskList.add("/home/barak/uploads-1");
-		diskList.add("/home/barak/uploads-2");
+		String[] paths = args[0].split(";");
+		for (String path : paths) {
+			if (!path.equals("")) {
+				diskList.add(path);
+			}
+		}
+
 		try {
 			StorageManager.initStorageManager(diskList);
 		} catch (Exception e) {
