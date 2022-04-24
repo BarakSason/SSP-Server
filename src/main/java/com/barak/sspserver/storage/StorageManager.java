@@ -46,7 +46,10 @@ public class StorageManager {
 	}
 
 	public String allocateDisk(String id) {
-		/* Files are created on a single disk based on */
+		/*
+		 * Files are created on a single disk based on the id of the corresponding db
+		 * object
+		 */
 		int fileHash = Integer.parseInt(id);
 		int diskNum = fileHash % disks.size();
 
@@ -75,6 +78,7 @@ public class StorageManager {
 	}
 
 	public int deleteDir(String dirPath) {
+		/* Dirs are deleted from all disks */
 		try {
 			for (String diskPath : disksArray) {
 				Files.delete(Paths.get(diskPath + dirPath));

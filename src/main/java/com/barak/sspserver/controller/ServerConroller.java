@@ -34,8 +34,8 @@ public class ServerConroller {
 	public ResponseEntity<String> create(@RequestBody FileData fileData) {
 		String filePath = fileData.getDirPath() + fileData.getFileName();
 
-		// Search the db to verify this file doesn't exist in it
-		DBFileObject match = mongoManager.searchByPath(filePath);
+		/* Search the db to verify this file doesn't exist in it */
+		DBFileObject match = mongoManager.searchByFilePath(filePath);
 
 		if (match != null) {
 			return ResponseEntity.status(HttpStatus.CONFLICT).body("File already exist in db" + filePath);
@@ -45,7 +45,7 @@ public class ServerConroller {
 		String diskPath = storageManager.allocateDisk(dbFileObject.getId());
 		dbFileObject.setDiskPath(diskPath);
 
-		// Create the file on disk
+		/* Create the file on disk */
 		try {
 			storageManager.create(fileData.getFileContent(), diskPath + filePath);
 		} catch (FileAlreadyExistsException e) {
@@ -54,7 +54,7 @@ public class ServerConroller {
 			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Error creating file " + e.getMessage());
 		}
 
-		// Add file to db
+		/* Add file to db */
 		try {
 			mongoManager.insert(dbFileObject);
 		} catch (Exception e) {
@@ -88,12 +88,12 @@ public class ServerConroller {
 			parentDirPath = dirPath;
 		}
 
-		// Create dir on disk
+		/* Create dir on disk */
 		if (storageManager.mkdir(dirPath) != 0) {
 			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("Failed to create dir " + dirPath);
 		}
 
-		// Add dir to db
+		/* Add dir to db */
 		try {
 			mongoManager.insert(new DBFileObject(dirPath, parentDirPath, ""));
 		} catch (Exception e) {
@@ -161,7 +161,7 @@ public class ServerConroller {
 
 	@GetMapping("/download")
 	public ResponseEntity<byte[]> download(@RequestParam("filePath") String filePath) {
-		DBFileObject match = mongoManager.searchByPath(filePath);
+		DBFileObject match = mongoManager.searchByFilePath(filePath);
 		if (match == null) {
 			return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED)
 					.body(("File doesn't exist " + filePath).getBytes());

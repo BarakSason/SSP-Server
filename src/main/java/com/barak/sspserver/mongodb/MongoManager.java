@@ -20,24 +20,19 @@ public class MongoManager {
 		rep.save(dbFileObject);
 	}
 
-	public DBFileObject searchByPath(String filePath) {
+	public DBFileObject searchByFilePath(String filePath) {
 		DBFileObject dbFileObject = new DBFileObject();
 		dbFileObject.setFilePath(filePath);
 		Example<DBFileObject> dbFileObjectExample = Example.of(dbFileObject);
 		Optional<DBFileObject> match = rep.findOne(dbFileObjectExample);
 
-		if (match.isEmpty()) {
-			return null;
-		}
-
-		return match.get();
+		return match.isEmpty() ? null : match.get();
 	}
 
 	public LinkedList<String> listAll() {
 		LinkedList<String> files = new LinkedList<>();
 
 		List<DBFileObject> dbFiles = rep.findAll();
-
 		Iterator<DBFileObject> it = dbFiles.iterator();
 		while (it.hasNext()) {
 			DBFileObject dbFileObject = it.next();
@@ -65,17 +60,11 @@ public class MongoManager {
 	}
 
 	public String removeEntry(String filePath) {
-		DBFileObject dbFileObject = new DBFileObject();
-		dbFileObject.setFilePath(filePath);
-
-		Example<DBFileObject> dbFileObjectExample = Example.of(dbFileObject);
-		Optional<DBFileObject> match = rep.findOne(dbFileObjectExample);
-
-		if (match.isEmpty()) {
+		DBFileObject dbFileObject = searchByFilePath(filePath);
+		if (dbFileObject == null) {
 			return null;
 		}
 
-		dbFileObject = match.get();
 		rep.delete(dbFileObject);
 		return dbFileObject.getDiskPath();
 	}
@@ -86,7 +75,6 @@ public class MongoManager {
 		Example<DBFileObject> dbFileObjectExample = Example.of(dbFileObject);
 
 		Optional<DBFileObject> match = rep.findOne(dbFileObjectExample);
-
 		if (match.isEmpty()) {
 			return -1;
 		}

@@ -15,6 +15,7 @@ public class SSP_Server {
 			System.out.println("Provide paths for storage");
 		}
 
+		/* Get disk pathes from args */
 		LinkedList<String> diskList = new LinkedList<String>();
 		String[] paths = args[0].split(";");
 		for (String path : paths) {
@@ -23,13 +24,14 @@ public class SSP_Server {
 			}
 		}
 
+		/* Send disk paths to the storage manager */
 		try {
 			StorageManager.initStorageManager(diskList);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		// Run Server
+		/* Run server */
 		SpringApplication.run(SSP_Server.class, args);
 	}
 }

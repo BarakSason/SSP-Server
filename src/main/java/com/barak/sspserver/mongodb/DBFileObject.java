@@ -15,11 +15,11 @@ import lombok.Setter;
 @Document(collection = "Files")
 public class DBFileObject {
 	@Id
-	private String id;
-	private String fileName;
-	private String dirPath;
-	private String filePath;
-	private String diskPath;
+	private String id; /* ID of the stored object */
+	private String fileName; /* File name of the stored object */
+	private String dirPath; /* Path of the parent dir of the stored object */
+	private String filePath; /* Path relative to the mountpoint of the stored object */
+	private String diskPath; /* Path of the disk which was allocated to the stored object */
 
 	public DBFileObject(String fileName, String dirPath, String filePath) {
 		this.fileName = fileName;
