@@ -11,8 +11,9 @@ import com.barak.sspserver.storage.StorageManager;
 public class SSP_Server {
 
 	public static void main(String[] args) {
-		if (args[0] == null) {
+		if (args.length != 1) {
 			System.out.println("Provide paths for storage");
+			System.exit(0);
 		}
 
 		/* Get disk pathes from args */
